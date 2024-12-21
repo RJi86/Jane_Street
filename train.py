@@ -114,7 +114,7 @@ class TrainingManager:
             
             if self.args.debug:
                 print("\nDebug mode: Using subset of data")
-                df = df.sample(n=min(10000, len(df)), random_state=42)
+                df = df.sample(n=min(10000, len(df)), seed=42)
             
             # Feature engineering
             print("\nPerforming feature engineering...")
