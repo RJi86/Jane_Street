@@ -1,16 +1,18 @@
+# src/trainer.py
 import lightgbm as lgb
 import torch
 from tqdm import tqdm
 import psutil
 import os
 import numpy as np
+import polars as pl
 
 class Trainer:
     def __init__(self, config, checkpoint_manager):
         self.config = config
         self.checkpoint_manager = checkpoint_manager
         self.setup_gpu()
-        
+    
     def setup_gpu(self):
         """Setup GPU if available and requested"""
         if self.config.use_gpu:
@@ -25,9 +27,8 @@ class Trainer:
                 print("Falling back to CPU training.")
                 self.config.use_gpu = False
     
-    def train(self, train_data, val_data, start_epoch=0, model=None):
-        """Train the model"""
-        # Print memory usage
+    def train(self, train_data: pl.DataFrame, val_data: pl.DataFrame, start_epoch=0, model=None):
+        """Train the model with Polars DataFrames"""
         self.print_memory_usage()
         
         # Get feature columns
@@ -40,40 +41,56 @@ class Trainer:
             'objective': 'regression',
             'metric': 'rmse',
             'boosting_type': 'gbdt',
-            'num_leaves': self.config.num_leaves,
+            'num_leaves': min(self.config.num_leaves, 31),
             'learning_rate': self.config.learning_rate,
-            'feature_fraction': self.config.feature_fraction,
-            'bagging_fraction': self.config.bagging_fraction,
-            'bagging_freq': self.config.bagging_freq,
-            'verbose': -1
+            'feature_fraction': 0.8,
+            'bagging_fraction': 0.8,
+            'bagging_freq': 5,
+            'verbose': -1,
+            'max_bin': 255,
+            'min_data_in_leaf': 20,
+            'max_depth': 8
         }
         
         if self.config.use_gpu:
             params.update({
                 'device': 'gpu',
-                'gpu_device_id': self.config.gpu_device
+                'gpu_device_id': self.config.gpu_device,
+                'max_bin': 63
             })
-            
+        
+        # Convert Polars DataFrame to numpy arrays efficiently
+        print("\nPreparing training data...")
+        X_train = train_data.select(feature_cols).to_numpy()
+        y_train = train_data.select(['responder_6']).to_numpy().ravel()
+        w_train = train_data.select(['weight']).to_numpy().ravel()
+        
+        X_val = val_data.select(feature_cols).to_numpy()
+        y_val = val_data.select(['responder_6']).to_numpy().ravel()
+        w_val = val_data.select(['weight']).to_numpy().ravel()
+        
         # Create datasets
         print("\nCreating LightGBM datasets...")
         train_dataset = lgb.Dataset(
-            train_data[feature_cols],
-            label=train_data['responder_6'],
-            weight=train_data['weight']
+            X_train.astype(np.float32),
+            label=y_train.astype(np.float32),
+            weight=w_train.astype(np.float32),
+            free_raw_data=True
         )
         
         val_dataset = lgb.Dataset(
-            val_data[feature_cols],
-            label=val_data['responder_6'],
-            weight=val_data['weight'],
-            reference=train_dataset
+            X_val.astype(np.float32),
+            label=y_val.astype(np.float32),
+            weight=w_val.astype(np.float32),
+            reference=train_dataset,
+            free_raw_data=True
         )
         
         # Training with callbacks
         print("\nStarting training...")
         callbacks = [
             lgb.callback.log_evaluation(period=100),
-            lgb.callback.record_evaluation({}),
+            lgb.callback.record_evaluation({})
         ]
         
         model = lgb.train(
@@ -82,7 +99,7 @@ class Trainer:
             valid_sets=[train_dataset, val_dataset],
             callbacks=callbacks,
             num_boost_round=self.config.num_boost_round,
-            init_model=model,  # Continue from existing model if provided
+            init_model=model,
             valid_names=['train', 'valid']
         )
         

@@ -1,0 +1,14 @@
+{
+    "start_time": "2024-12-21T03:44:41.413965",
+    "model_name": "lgb_baseline",
+    "gpu_enabled": true,
+    "partitions": [
+        0
+    ],
+    "user": "jihui",
+    "python_version": "3.11.11",
+    "cuda_version": "12.4",
+    "gpu_info": [
+        "NVIDIA GeForce GTX 1060 6GB"
+    ]
+}
