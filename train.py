@@ -9,6 +9,7 @@ import psutil
 from tqdm import tqdm
 import numpy as np
 import json
+import polars as pl
 
 from config.model_config import ModelConfig
 from src.trainer import Trainer
@@ -122,9 +123,25 @@ class TrainingManager:
             
             # Train/validation split
             print("\nSplitting data...")
-            split_date = df['date_id'].max() * 0.8
-            train_data = df[df['date_id'] < split_date]
-            val_data = df[df['date_id'] >= split_date]
+            try:
+                split_date = df['date_id'].max() * 0.8
+                print(f"Split date: {split_date}")
+                
+                # Use filter instead of boolean indexing
+                train_data = df.filter(pl.col('date_id') < split_date)
+                val_data = df.filter(pl.col('date_id') >= split_date)
+                
+                print(f"\nDataset shapes:")
+                print(f"- Training data: {train_data.shape}")
+                print(f"- Validation data: {val_data.shape}")
+                
+            except Exception as e:
+                print(f"Error during data splitting: {e}")
+                print(f"DataFrame info:")
+                print(f"- Shape: {df.shape}")
+                print(f"- Columns: {df.columns}")
+                print(f"- date_id range: {df['date_id'].min()} to {df['date_id'].max()}")
+                raise
             
             print(f"\nDataset shapes:")
             print(f"- Training data: {train_data.shape}")
