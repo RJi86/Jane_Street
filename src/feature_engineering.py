@@ -86,11 +86,29 @@ class FeatureEngineer:
         print("Creating cross features...")
         feature_cols = [f'feature_{i:02d}' for i in range(79)]
         
-        # Basic statistical features - Modified to have unique names
-        expressions = [
-            pl.col(feature_cols).mean().alias("all_features_mean"),  # Changed name to be unique
-            pl.col(feature_cols).std().alias("all_features_std")     # Changed name to be unique
-        ]
+        # Calculate means for each feature separately
+        expressions = []
+        
+        # Add a single row-wise mean across all features
+        expressions.append(
+            pl.fold(
+                acc=pl.lit(0.0),
+                function=lambda acc, x: acc + x,
+                exprs=[pl.col(col) for col in feature_cols]
+            ).truediv(len(feature_cols)).alias("all_features_mean")
+        )
+        
+        # Add standard deviation
+        expressions.append(
+            pl.fold(
+                acc=pl.lit(0.0),
+                function=lambda acc, x: acc + x.pow(2),
+                exprs=[pl.col(col) for col in feature_cols]
+            ).truediv(len(feature_cols))
+            .sub(pl.col("all_features_mean").pow(2))
+            .sqrt()
+            .alias("all_features_std")
+        )
         
         # Feature interactions (first few features only for efficiency)
         for i in range(5):
