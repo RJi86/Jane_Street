@@ -9,3 +9,4 @@ models/
 checkpoints/
 
 __pycache__/
+venv/

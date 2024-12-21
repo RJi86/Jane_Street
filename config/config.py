@@ -4,7 +4,7 @@ from pathlib import Path
 class Config:
     # Paths
     BASE_DIR = Path(__file__).parent.parent
-    DATA_DIR = BASE_DIR / "Dataset"
+    DATA_DIR = "/shared/Dataset"
     TRAIN_DIR = DATA_DIR / "train.parquet"
     MODEL_DIR = BASE_DIR / "models"
     
