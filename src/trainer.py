@@ -56,12 +56,12 @@ class Trainer:
             'feature_fraction': 0.8,
             'bagging_fraction': 0.8,
             'bagging_freq': 5,
-            'verbose': -1,
+            'verbose': 2,
             'max_bin': 255,
             'min_data_in_leaf': 20,
             'max_depth': 8,
             'force_col_wise': True,
-            'deterministic': True,
+            'deterministic': False,
             'use_missing': False,
             'zero_as_missing': False,
             'first_metric_only': True
@@ -69,12 +69,11 @@ class Trainer:
         
         if self.config.use_gpu:
             params.update({
-                'device': 'gpu',
+                'device_type': 'cuda',
                 'gpu_device_id': self.config.gpu_device,
                 'max_bin': 63,
-                'gpu_use_dp': True,
+                'gpu_use_dp': False,
                 'gpu_platform_id': 0,
-                'gpu_max_bin_by_feature': '63:63'
             })
         
         # Prepare data
