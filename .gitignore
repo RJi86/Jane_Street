@@ -7,3 +7,7 @@ misc/
 logs/
 
 models/
+
+checkpoints/
+
+__pycache__
