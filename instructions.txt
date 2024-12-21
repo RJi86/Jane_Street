@@ -9,6 +9,8 @@ python train.py --use_gpu
 python train.py --model_name my_model_v1 --partitions 0 1 2 --use_gpu
 
 
+
+
 # Resume Training from Checkpoint
 # Resume from latest checkpoint
 python train.py --resume
@@ -18,3 +20,25 @@ python train.py --checkpoint lgb_baseline_epoch5_20240121_011015
 
 # Resume with GPU
 python train.py --resume --use_gpu
+
+
+
+
+# View available checkpoints
+python train.py --list_checkpoints
+
+
+
+
+# Common Training Scenarios
+# Start new training with GPU on first 3 partitions
+python train.py --model_name first_try --use_gpu --partitions 0 1 2
+
+# Resume interrupted training
+python train.py --resume --use_gpu
+
+# Start fresh training with different model name
+python train.py --model_name second_try --use_gpu
+
+# View all saved checkpoints
+python train.py --list_checkpoints
