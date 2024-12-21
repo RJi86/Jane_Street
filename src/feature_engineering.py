@@ -16,20 +16,26 @@ class FeatureEngineer:
         logger.info("Starting feature engineering...")
         print("Creating features...")
         print(f"Initial shape: {df.shape}")
+        print("Initial columns:", df.columns)
         
         # Sort the dataframe
         df = df.sort(["symbol_id", "date_id", "time_id"])
         
-        # Create features
-        df_with_features = (df
-            .pipe(self._create_time_features)
-            .pipe(self._create_rolling_features)
-            .pipe(self._create_lag_features)
-            .pipe(self._create_cross_features)
-        )
+        # Create features with logging after each step
+        df = self._create_time_features(df)
+        print(f"Shape after time features: {df.shape}")
         
-        print(f"Final shape: {df_with_features.shape}")
-        return df_with_features
+        df = self._create_rolling_features(df)
+        print(f"Shape after rolling features: {df.shape}")
+        
+        df = self._create_lag_features(df)
+        print(f"Shape after lag features: {df.shape}")
+        
+        df = self._create_cross_features(df)
+        print(f"Shape after cross features: {df.shape}")
+        
+        print(f"Final shape: {df.shape}")
+        return df
     
     def _create_time_features(self, df: pl.DataFrame) -> pl.DataFrame:
         """Create time-based features using Polars"""
@@ -84,22 +90,23 @@ class FeatureEngineer:
     def _create_cross_features(self, df: pl.DataFrame) -> pl.DataFrame:
         """Create interaction features using Polars"""
         print("Creating cross features...")
+        print("Available columns before cross features:", df.columns)
+        
         feature_cols = [f'feature_{i:02d}' for i in range(79)]
         
-        # Calculate means for each feature separately
-        expressions = []
-        
-        # Add a single row-wise mean across all features
-        expressions.append(
+        # First, calculate the mean and std in separate operations
+        df = df.with_columns([
             pl.fold(
                 acc=pl.lit(0.0),
                 function=lambda acc, x: acc + x,
                 exprs=[pl.col(col) for col in feature_cols]
             ).truediv(len(feature_cols)).alias("all_features_mean")
-        )
+        ])
         
-        # Add standard deviation
-        expressions.append(
+        print("Columns after mean calculation:", df.columns)
+        
+        # Now calculate std using the already calculated mean
+        df = df.with_columns([
             pl.fold(
                 acc=pl.lit(0.0),
                 function=lambda acc, x: acc + x.pow(2),
@@ -108,15 +115,24 @@ class FeatureEngineer:
             .sub(pl.col("all_features_mean").pow(2))
             .sqrt()
             .alias("all_features_std")
-        )
+        ])
+        
+        print("Columns after std calculation:", df.columns)
         
         # Feature interactions (first few features only for efficiency)
+        interaction_expressions = []
         for i in range(5):
             for j in range(i+1, 5):
                 feat_i = f'feature_{i:02d}'
                 feat_j = f'feature_{j:02d}'
-                expressions.append(
+                interaction_expressions.append(
                     (pl.col(feat_i) * pl.col(feat_j)).alias(f'interact_{i}_{j}')
                 )
         
-        return df.with_columns(expressions)
+        # Add interaction features
+        df = df.with_columns(interaction_expressions)
+        
+        print("Final columns after cross features:", df.columns)
+        print(f"Final shape after cross features: {df.shape}")
+        
+        return df
