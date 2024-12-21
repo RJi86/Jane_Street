@@ -19,13 +19,13 @@ class ModelConfig:
     feature_fraction: float = 0.9
     bagging_fraction: float = 0.8
     bagging_freq: int = 5
-    early_stopping_rounds: int = 50
+    early_stopping_rounds: int = -1
     num_boost_round: int = 1000
     
     def __post_init__(self):
         # Paths
         self.base_dir = Path(__file__).parent.parent
-        self.data_dir = os.env("DATA_DIR") or self.base_dir / "Dataset" / "train.parquet"
+        self.data_dir = os.getenv("DATA_DIR") or self.base_dir / "Dataset" / "train.parquet"
         self.checkpoint_dir = self.base_dir / "checkpoints"
         
         # Create necessary directories
