@@ -1,4 +1,3 @@
-# src/trainer.py
 import lightgbm as lgb
 import torch
 from tqdm import tqdm
@@ -6,6 +5,7 @@ import psutil
 import os
 import numpy as np
 import polars as pl
+import warnings
 
 class Trainer:
     def __init__(self, config, checkpoint_manager):
@@ -26,7 +26,7 @@ class Trainer:
                 print("\nWARNING: GPU was requested but no CUDA device is available.")
                 print("Falling back to CPU training.")
                 self.config.use_gpu = False
-    
+
     def r_squared(self, y_true, y_pred, weights=None):
         """Calculate R² score, optionally with weights"""
         if weights is None:
@@ -36,7 +36,7 @@ class Trainer:
         residual_ss = np.sum(weights * (y_true - y_pred) ** 2)
         r2 = 1 - (residual_ss / total_ss)
         return r2
-
+    
     def train(self, train_data: pl.DataFrame, val_data: pl.DataFrame, start_epoch=0, model=None):
         """Train the model with Polars DataFrames"""
         self.print_memory_usage()
@@ -46,7 +46,7 @@ class Trainer:
                        if col not in ['date_id', 'time_id', 'symbol_id', 'weight'] + 
                        [f'responder_{i}' for i in range(9)]]
         
-        # Setup LightGBM parameters
+        # Setup LightGBM parameters with additional warning suppressions
         params = {
             'objective': 'regression',
             'metric': 'rmse',
@@ -60,8 +60,11 @@ class Trainer:
             'max_bin': 255,
             'min_data_in_leaf': 20,
             'max_depth': 8,
-            'force_col_wise': True,  # Add this to fix warnings
-            'deterministic': True    # Add this to fix warnings
+            'force_col_wise': True,
+            'deterministic': True,
+            'use_missing': False,
+            'zero_as_missing': False,
+            'first_metric_only': True
         }
         
         if self.config.use_gpu:
@@ -69,7 +72,9 @@ class Trainer:
                 'device': 'gpu',
                 'gpu_device_id': self.config.gpu_device,
                 'max_bin': 63,
-                'gpu_use_dp': True  # Add this to fix warnings
+                'gpu_use_dp': True,
+                'gpu_platform_id': 0,
+                'gpu_max_bin_by_feature': '63:63'
             })
         
         # Prepare data
@@ -99,10 +104,11 @@ class Trainer:
             free_raw_data=True
         )
         
-        # Custom callback for more frequent logging and R² calculation
+        # Custom callback for more formatted logging
         train_scores = []
         valid_scores = []
-        
+        total_epochs = self.config.num_boost_round
+
         def callback(env):
             if env.iteration % 1 == 0:  # Log every epoch
                 # Get predictions for R² calculation
@@ -113,17 +119,26 @@ class Trainer:
                 train_r2 = self.r_squared(y_train, y_train_pred, w_train)
                 valid_r2 = self.r_squared(y_val, y_val_pred, w_val)
                 
-                print(f'[{env.iteration}]\t'
-                      f"train's rmse: {env.evaluation_result_list[0][2]:.6f}\t"
-                      f"R²: {train_r2:.6f}\t"
-                      f"valid's rmse: {env.evaluation_result_list[1][2]:.6f}\t"
-                      f"R²: {valid_r2:.6f}")
+                # Clear the line before printing new output
+                print('\r', end='')
+                
+                # Format the output with epoch counter and metrics
+                print(f'Epoch {env.iteration+1}/{total_epochs} - '
+                      f"Train RMSE: {env.evaluation_result_list[0][2]:.6f} "
+                      f"R²: {train_r2:.6f} | "
+                      f"Valid RMSE: {env.evaluation_result_list[1][2]:.6f} "
+                      f"R²: {valid_r2:.6f}", end='\n')
                 
                 train_scores.append((env.evaluation_result_list[0][2], train_r2))
                 valid_scores.append((env.evaluation_result_list[1][2], valid_r2))
         
-        # Training with callbacks
+        # Training with callbacks and warning suppression
         print("\nStarting training...")
+        print("=" * 80)  # Add separator line
+        
+        # Suppress LightGBM warnings at the Python level
+        warnings.filterwarnings('ignore', category=UserWarning, module='lightgbm')
+        
         callbacks = [
             callback,
             lgb.callback.record_evaluation({})
@@ -138,6 +153,9 @@ class Trainer:
             init_model=model,
             valid_names=['train', 'valid']
         )
+        
+        print("\n" + "=" * 80)  # Add separator line
+        print("Training completed!")
         
         # Save final checkpoint with additional metrics
         final_metrics = {
