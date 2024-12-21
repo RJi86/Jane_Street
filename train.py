@@ -24,7 +24,7 @@ class TrainingManager:
         # Remove config parameter from setup_logging call
         self.logger = setup_logging()  # Changed this line
         self.checkpoint_manager = CheckpointManager(self.config)
-        self.start_time = datetime.datetime.utcnow()
+        self.start_time = datetime.datetime.now(datetime.timezone.utc)
         
     def _initialize_config(self):
         config = ModelConfig()
@@ -114,7 +114,7 @@ class TrainingManager:
             
             if self.args.debug:
                 print("\nDebug mode: Using subset of data")
-                df = df.sample(n=min(10000, len(df)), random_state=42)
+                df = df.sample(n=min(10000, len(df)), seed=42)
             
             # Feature engineering
             print("\nPerforming feature engineering...")
@@ -163,7 +163,7 @@ class TrainingManager:
             if model is not None:
                 print("Saving emergency checkpoint...")
                 try:
-                    emergency_checkpoint_name = f"{self.config.model_name}_emergency_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                    emergency_checkpoint_name = f"{self.config.model_name}_emergency_{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d_%H%M%S')}"
                     self.checkpoint_manager.save_checkpoint(
                         state={'model': model},
                         epoch=start_epoch,
@@ -228,7 +228,7 @@ def main():
     args = parser.parse_args()
     
     # Print start time and user info
-    print(f"\nCurrent Date and Time (UTC): {datetime.datetime.utcnow()}")
+    print(f"\nCurrent Date and Time (UTC): {datetime.datetime.now(datetime.timezone.utc)}")
     print(f"Current User's Login: {os.getenv('USERNAME', 'unknown')}\n")
     
     # Run training

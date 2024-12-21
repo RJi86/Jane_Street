@@ -64,7 +64,9 @@ class Trainer:
             'deterministic': False,
             'use_missing': False,
             'zero_as_missing': False,
-            'first_metric_only': True
+            'first_metric_only': True,
+            "num_threads": psutil.cpu_count(logical=False),
+            "early_stopping_round": self.config.early_stopping_rounds,
         }
         
         if self.config.use_gpu:
@@ -74,6 +76,7 @@ class Trainer:
                 'max_bin': 63,
                 'gpu_use_dp': False,
                 'gpu_platform_id': 0,
+                "num_leaves": 2**13 - 1,
             })
         
         # Prepare data

@@ -13,7 +13,7 @@ def setup_logging():
     log_dir.mkdir(exist_ok=True)
     
     # Create timestamp for log file
-    timestamp = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d_%H%M%S")
     log_file = log_dir / f"training_{timestamp}.log"
     
     # Configure logging

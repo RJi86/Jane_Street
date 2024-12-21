@@ -20,7 +20,7 @@ class CheckpointManager:
             user_info: optional user information
         """
         # Create timestamp and checkpoint name
-        timestamp = datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d_%H%M%S')
         checkpoint_name = f"{self.config.model_name}_epoch{epoch}_{timestamp}"
         
         # Save model
@@ -37,7 +37,7 @@ class CheckpointManager:
             'last_partition_processed': state.get('last_partition_processed', 0),
             'user_info': user_info or {
                 'username': os.getenv('USERNAME', 'unknown'),
-                'save_time_utc': datetime.datetime.utcnow().isoformat()
+                'save_time_utc': datetime.datetime.now(datetime.timezone.utc).isoformat()
             }
         }
         
