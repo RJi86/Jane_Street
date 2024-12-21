@@ -24,7 +24,7 @@ class ModelConfig:
     def __post_init__(self):
         # Paths
         self.base_dir = Path(__file__).parent.parent
-        self.data_dir = self.base_dir / "Dataset" / "train.parquet"
+        self.data_dir ="/shared/Dataset/train.parquet"
         self.checkpoint_dir = self.base_dir / "checkpoints"
         
         # Create necessary directories
