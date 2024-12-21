@@ -1,0 +1,40 @@
+2024-12-21 12:37:50,320 [INFO] Loading data from: C:\Users\jihui\Desktop\Jane Street Comp\Dataset\train.parquet
+2024-12-21 12:37:50,320 [INFO] Partitions to load: [0, 1]
+2024-12-21 12:37:50,321 [INFO] Loading partition from: C:\Users\jihui\Desktop\Jane Street Comp\Dataset\train.parquet\partition_id=0\part-0.parquet
+2024-12-21 12:37:51,034 [INFO] Successfully loaded partition 0 with shape (1944210, 92)
+2024-12-21 12:37:51,035 [INFO] Cumulative rows loaded: 1,944,210
+2024-12-21 12:37:51,035 [INFO] Loading partition from: C:\Users\jihui\Desktop\Jane Street Comp\Dataset\train.parquet\partition_id=1\part-0.parquet
+2024-12-21 12:37:51,987 [INFO] Successfully loaded partition 1 with shape (2804247, 92)
+2024-12-21 12:37:51,988 [INFO] Cumulative rows loaded: 4,748,457
+2024-12-21 12:37:52,376 [INFO] Final dataset shape: (4748457, 92)
+2024-12-21 12:37:52,486 [INFO] Starting feature engineering...
+2024-12-21 12:43:50,256 [ERROR] Training failed with exception
+Traceback (most recent call last):
+  File "C:\Users\jihui\Desktop\Jane Street Comp\train.py", line 121, in run
+    df = feature_engineer.create_features(df)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jihui\Desktop\Jane Street Comp\src\feature_engineering.py", line 26, in create_features
+    'rolling': self._create_rolling_features_efficient(df),
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\jihui\Desktop\Jane Street Comp\src\feature_engineering.py", line 71, in _create_rolling_features_efficient
+    return pd.DataFrame(features_dict)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\jihui\Desktop\Jane Street Comp\.conda\Lib\site-packages\pandas\core\frame.py", line 778, in __init__
+    mgr = dict_to_mgr(data, index, columns, dtype=dtype, copy=copy, typ=manager)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\jihui\Desktop\Jane Street Comp\.conda\Lib\site-packages\pandas\core\internals\construction.py", line 503, in dict_to_mgr
+    return arrays_to_mgr(arrays, columns, index, dtype=dtype, typ=typ, consolidate=copy)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\jihui\Desktop\Jane Street Comp\.conda\Lib\site-packages\pandas\core\internals\construction.py", line 152, in arrays_to_mgr
+    return create_block_manager_from_column_arrays(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\jihui\Desktop\Jane Street Comp\.conda\Lib\site-packages\pandas\core\internals\managers.py", line 2139, in create_block_manager_from_column_arrays
+    blocks = _form_blocks(arrays, consolidate, refs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\jihui\Desktop\Jane Street Comp\.conda\Lib\site-packages\pandas\core\internals\managers.py", line 2212, in _form_blocks
+    values, placement = _stack_arrays(list(tup_block), dtype)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\jihui\Desktop\Jane Street Comp\.conda\Lib\site-packages\pandas\core\internals\managers.py", line 2252, in _stack_arrays
+    stacked = np.empty(shape, dtype=dtype)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+numpy._core._exceptions._ArrayMemoryError: Unable to allocate 16.8 GiB for an array with shape (474, 4748457) and data type float64
