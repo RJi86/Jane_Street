@@ -27,6 +27,16 @@ class Trainer:
                 print("Falling back to CPU training.")
                 self.config.use_gpu = False
     
+    def r_squared(self, y_true, y_pred, weights=None):
+        """Calculate R² score, optionally with weights"""
+        if weights is None:
+            weights = np.ones_like(y_true)
+        weighted_mean = np.average(y_true, weights=weights)
+        total_ss = np.sum(weights * (y_true - weighted_mean) ** 2)
+        residual_ss = np.sum(weights * (y_true - y_pred) ** 2)
+        r2 = 1 - (residual_ss / total_ss)
+        return r2
+
     def train(self, train_data: pl.DataFrame, val_data: pl.DataFrame, start_epoch=0, model=None):
         """Train the model with Polars DataFrames"""
         self.print_memory_usage()
@@ -49,17 +59,20 @@ class Trainer:
             'verbose': -1,
             'max_bin': 255,
             'min_data_in_leaf': 20,
-            'max_depth': 8
+            'max_depth': 8,
+            'force_col_wise': True,  # Add this to fix warnings
+            'deterministic': True    # Add this to fix warnings
         }
         
         if self.config.use_gpu:
             params.update({
                 'device': 'gpu',
                 'gpu_device_id': self.config.gpu_device,
-                'max_bin': 63
+                'max_bin': 63,
+                'gpu_use_dp': True  # Add this to fix warnings
             })
         
-        # Convert Polars DataFrame to numpy arrays efficiently
+        # Prepare data
         print("\nPreparing training data...")
         X_train = train_data.select(feature_cols).to_numpy()
         y_train = train_data.select(['responder_6']).to_numpy().ravel()
@@ -86,10 +99,33 @@ class Trainer:
             free_raw_data=True
         )
         
+        # Custom callback for more frequent logging and R² calculation
+        train_scores = []
+        valid_scores = []
+        
+        def callback(env):
+            if env.iteration % 1 == 0:  # Log every epoch
+                # Get predictions for R² calculation
+                y_train_pred = env.model.predict(X_train)
+                y_val_pred = env.model.predict(X_val)
+                
+                # Calculate R² scores
+                train_r2 = self.r_squared(y_train, y_train_pred, w_train)
+                valid_r2 = self.r_squared(y_val, y_val_pred, w_val)
+                
+                print(f'[{env.iteration}]\t'
+                      f"train's rmse: {env.evaluation_result_list[0][2]:.6f}\t"
+                      f"R²: {train_r2:.6f}\t"
+                      f"valid's rmse: {env.evaluation_result_list[1][2]:.6f}\t"
+                      f"R²: {valid_r2:.6f}")
+                
+                train_scores.append((env.evaluation_result_list[0][2], train_r2))
+                valid_scores.append((env.evaluation_result_list[1][2], valid_r2))
+        
         # Training with callbacks
         print("\nStarting training...")
         callbacks = [
-            lgb.callback.log_evaluation(period=100),
+            callback,
             lgb.callback.record_evaluation({})
         ]
         
@@ -103,15 +139,24 @@ class Trainer:
             valid_names=['train', 'valid']
         )
         
-        # Save final checkpoint
+        # Save final checkpoint with additional metrics
+        final_metrics = {
+            'train_rmse': train_scores[-1][0],
+            'train_r2': train_scores[-1][1],
+            'valid_rmse': valid_scores[-1][0],
+            'valid_r2': valid_scores[-1][1]
+        }
+        
         self.checkpoint_manager.save_checkpoint(
             state={
                 'model': model,
                 'feature_columns': feature_cols,
-                'model_params': params
+                'model_params': params,
+                'train_history': train_scores,
+                'valid_history': valid_scores
             },
             epoch=start_epoch + self.config.num_boost_round,
-            metrics=model.best_score
+            metrics=final_metrics
         )
         
         return model
