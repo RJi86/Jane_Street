@@ -1,4 +1,3 @@
-# Quick test script (save as test_data.py)
 from config.model_config import ModelConfig
 from src.utils import load_training_data
 import sys
