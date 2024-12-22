@@ -1,5 +1,9 @@
 pip install -r requirements.txt
 
+# Set up Torch Forecasting
+pip install pytorch-forecasting pytorch-lightning
+
+
 # Start New Training
 ## Basic training with default settings
 python train.py
