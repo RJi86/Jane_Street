@@ -12,7 +12,7 @@ import json
 import polars as pl
 
 from config.model_config import ModelConfig
-from src.trainer import Trainer
+from src.tft_trainer import TFTTrainer  # Update import
 from src.checkpoint_manager import CheckpointManager
 from src.feature_engineering import FeatureEngineer
 from src.utils import load_training_data, setup_logging
@@ -21,8 +21,7 @@ class TrainingManager:
     def __init__(self, args):
         self.args = args
         self.config = self._initialize_config()
-        # Remove config parameter from setup_logging call
-        self.logger = setup_logging()  # Changed this line
+        self.logger = setup_logging()
         self.checkpoint_manager = CheckpointManager(self.config)
         self.start_time = datetime.datetime.now(datetime.timezone.utc)
         
@@ -88,26 +87,11 @@ class TrainingManager:
         if self.args.list_checkpoints:
             self.checkpoint_manager.list_checkpoints()
             return
-            
-        trainer = None
-        model = None
-        start_epoch = 0
         
         try:
-            # Initialize trainer
-            trainer = Trainer(self.config, self.checkpoint_manager)
-            
-            # Load checkpoint if resuming
-            if self.args.resume or self.args.checkpoint:
-                print("\nLoading checkpoint...")
-                checkpoint = self.checkpoint_manager.load_checkpoint(self.args.checkpoint)
-                if checkpoint:
-                    model = checkpoint['model']
-                    start_epoch = checkpoint['metadata']['epoch']
-                    print(f"Successfully loaded checkpoint from epoch {start_epoch}")
-                else:
-                    print("No checkpoint found, starting from scratch")
-            
+            # Initialize TFTTrainer
+            trainer = TFTTrainer(self.config)
+
             # Load and process data
             print("\nLoading data...")
             df = load_training_data(self.config.data_dir, partitions=self.args.partitions)
@@ -127,11 +111,10 @@ class TrainingManager:
                 split_date = df['date_id'].max() * 0.8
                 print(f"Split date: {split_date}")
                 
-                # Use filter instead of boolean indexing
                 train_data = df.filter(pl.col('date_id') < split_date)
                 val_data = df.filter(pl.col('date_id') >= split_date)
                 
-                print(f"\nDataset shapes:")
+                print("\nDataset shapes:")
                 print(f"- Training data: {train_data.shape}")
                 print(f"- Validation data: {val_data.shape}")
                 
@@ -143,36 +126,20 @@ class TrainingManager:
                 print(f"- date_id range: {df['date_id'].min()} to {df['date_id'].max()}")
                 raise
             
-            print(f"\nDataset shapes:")
+            print("\nDataset shapes:")
             print(f"- Training data: {train_data.shape}")
             print(f"- Validation data: {val_data.shape}")
             
             # Train model
             print("\nStarting training...")
             model = trainer.train(
-                train_data=train_data,
-                val_data=val_data,
-                start_epoch=start_epoch,
-                model=model
+                data=train_data  # Assuming train_data is properly preprocessed
             )
             
             print("\nTraining completed successfully!")
             
         except KeyboardInterrupt:
             print("\n\nTraining interrupted by user")
-            if model is not None:
-                print("Saving emergency checkpoint...")
-                try:
-                    emergency_checkpoint_name = f"{self.config.model_name}_emergency_{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%d_%H%M%S')}"
-                    self.checkpoint_manager.save_checkpoint(
-                        state={'model': model},
-                        epoch=start_epoch,
-                        metrics={},
-                        user_info={'emergency': True, 'interrupted': True}
-                    )
-                    print(f"Emergency checkpoint saved: {emergency_checkpoint_name}")
-                except Exception as e:
-                    print(f"Failed to save emergency checkpoint: {e}")
             return 1
             
         except Exception as e:
@@ -181,7 +148,6 @@ class TrainingManager:
             raise
             
         finally:
-            # Print final memory usage
             process = psutil.Process(os.getpid())
             print(f"\nFinal memory usage: {process.memory_info().rss / 1024 / 1024:.2f} MB")
             
@@ -192,7 +158,7 @@ def main():
     
     # Model and training arguments
     parser.add_argument('--model_name', 
-                       default='lgb_baseline', 
+                       default='tft', 
                        help='Name of the model (used for checkpoints)')
     parser.add_argument('--use_gpu', 
                        action='store_true', 
