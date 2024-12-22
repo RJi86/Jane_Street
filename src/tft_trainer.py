@@ -33,18 +33,18 @@ class TFTTrainer:
         return r2
 
     def train(self, data):
-        training_cutoff = data["time_idx"].max() - self.config.max_prediction_length
+        # training_cutoff = data["time_idx"].max() - self.config.max_prediction_length
         training = TimeSeriesDataSet(
-            data.filter(pl.col("time_idx") <= training_cutoff),
-            time_idx="time_idx",
-            target="target",
-            group_ids=["group_id"],
+            data.to_pandas(use_pyarrow_extension_array=True),
+            time_idx="time_id",
+            target="responder_6",
+            group_ids=["symbol_id"],
             max_encoder_length=self.config.max_encoder_length,
             max_prediction_length=self.config.max_prediction_length,
-            static_categoricals=["group_id"],
-            time_varying_known_reals=["time_idx", "price"],
-            time_varying_unknown_reals=["target"],
-            target_normalizer=NaNLabelEncoder(add_nan=True),
+            static_categoricals=["symbol_id"],
+            time_varying_known_reals=["time_idx"] + [f"feature_{str(i).zfill(2)}" for i in range(79)],
+            time_varying_unknown_reals=["responder_6"],
+            # target_normalizer=NaNLabelEncoder(add_nan=True),
         )
 
         train_dataloader = DataLoader(training, batch_size=self.config.batch_size, shuffle=True)
@@ -70,24 +70,3 @@ class TFTTrainer:
             tqdm.write(f"Epoch {epoch + 1}/{self.config.max_epochs}")
 
         print("Training completed!")
-
-# Example usage
-if __name__ == "__main__":
-    config = {
-        "max_encoder_length": 60,
-        "max_prediction_length": 30,
-        "batch_size": 64,
-        "learning_rate": 0.03,
-        "hidden_size": 16,
-        "attention_head_size": 4,
-        "dropout": 0.3,
-        "hidden_continuous_size": 8,
-        "output_size": 7,
-        "use_gpu": True,
-        "gpu_device": 0,
-        "max_epochs": 30,
-    }
-
-    trainer = TFTTrainer(config)
-    # Assuming `data` is a preprocessed DataFrame ready for training
-    trainer.train(data)

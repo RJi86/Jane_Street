@@ -103,15 +103,22 @@ class TrainingManager:
             if self.args.debug:
                 print("\nDebug mode: Using subset of data")
                 df = df.head(10000)
-            
-            # Ensure time_idx is an integer type
-            df = df.with_columns(pl.col("time_idx").cast(pl.Int64))
 
             # Feature engineering
             print("\nPerforming feature engineering...")
             feature_engineer = FeatureEngineer(self.config)
-            df = feature_engineer.create_features(df).collect(streaming=True)
+            df = feature_engineer.create_features(df)
             
+            # Ensure time_idx is an integer type
+            df = df.with_columns(pl.col("time_idx").cast(pl.Int64), pl.col("symbol_id").cast(pl.String).cast(pl.Categorical))
+            df = df.fill_null(0)
+            # cast all floats to f32
+            for col in df.columns:
+                if df.select(col).dtypes == pl.Float32:
+                    df = df.with_columns(col, df.select(col).cast(pl.Float64))
+
+            df = df.collect(streaming=True)
+
             # Train/validation split
             print("\nSplitting data...")
             try:

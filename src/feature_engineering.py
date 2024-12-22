@@ -14,7 +14,7 @@ class FeatureEngineer:
         """Create all features efficiently using Polars"""
         logger.info("Starting feature engineering...")
         print("Creating features...")
-        print("Initial columns:", df.columns)
+        print("Initial columns:", df.collect_schema().names())
         
         # Sort the dataframe
         df = df.sort(["symbol_id", "date_id", "time_id"])
