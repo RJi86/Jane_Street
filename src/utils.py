@@ -39,8 +39,8 @@ def load_partition(partition_id, base_path):
         raise FileNotFoundError(f"Partition file not found: {partition_path}")
     
     # Use Polars to read parquet file
-    df = pl.read_parquet(partition_path)
-    logger.info(f"Successfully loaded partition {partition_id} with shape {df.shape}")
+    df = pl.scan_parquet(partition_path)
+    logger.info(f"Successfully loaded partition {partition_id}")
     return df
 
 def load_training_data(base_path, partitions=None):
@@ -53,19 +53,15 @@ def load_training_data(base_path, partitions=None):
     logger.info(f"Partitions to load: {partitions}")
     
     dfs = []
-    total_rows = 0
     
     for partition_id in partitions:
         try:
             df = load_partition(partition_id, base_path)
             dfs.append(df)
-            total_rows += df.shape[0]
-            logger.info(f"Cumulative rows loaded: {total_rows:,}")
         except Exception as e:
             logger.error(f"Error loading partition {partition_id}: {e}")
             raise
     
     # Concatenate all dataframes using Polars
     final_df = pl.concat(dfs)
-    logger.info(f"Final dataset shape: {final_df.shape}")
     return final_df

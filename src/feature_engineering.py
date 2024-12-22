@@ -14,7 +14,6 @@ class FeatureEngineer:
         """Create all features efficiently using Polars"""
         logger.info("Starting feature engineering...")
         print("Creating features...")
-        print(f"Initial shape: {df.shape}")
         print("Initial columns:", df.columns)
         
         # Sort the dataframe
@@ -22,18 +21,13 @@ class FeatureEngineer:
         
         # Create features with logging after each step
         df = self._create_time_features(df)
-        print(f"Shape after time features: {df.shape}")
         
         df = self._create_rolling_features(df)
-        print(f"Shape after rolling features: {df.shape}")
         
         df = self._create_lag_features(df)
-        print(f"Shape after lag features: {df.shape}")
         
         df = self._create_cross_features(df)
-        print(f"Shape after cross features: {df.shape}")
         
-        print(f"Final shape: {df.shape}")
         return df
     
     def _create_time_features(self, df: pl.DataFrame) -> pl.DataFrame:
@@ -135,6 +129,5 @@ class FeatureEngineer:
         df = df.with_columns(interaction_expressions)
         
         print("Final columns after cross features:", df.columns)
-        print(f"Final shape after cross features: {df.shape}")
         
         return df

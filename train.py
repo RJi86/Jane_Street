@@ -102,38 +102,28 @@ class TrainingManager:
             
             if self.args.debug:
                 print("\nDebug mode: Using subset of data")
-                df = df.sample(n=min(10000, len(df)), seed=42)
+                df = df.head(10000)
             
             # Feature engineering
             print("\nPerforming feature engineering...")
             feature_engineer = FeatureEngineer(self.config)
-            df = feature_engineer.create_features(df)
+            df = feature_engineer.create_features(df).collect(streaming=True)
             
             # Train/validation split
             print("\nSplitting data...")
             try:
-                split_date = df['date_id'].max() * 0.8
+                split_date = df.select('date_id').max() * 0.8
                 print(f"Split date: {split_date}")
                 
                 train_data = df.filter(pl.col('date_id') < split_date)
                 val_data = df.filter(pl.col('date_id') >= split_date)
                 
-                print("\nDataset shapes:")
-                print(f"- Training data: {train_data.shape}")
-                print(f"- Validation data: {val_data.shape}")
-                
             except Exception as e:
                 print(f"Error during data splitting: {e}")
                 print(f"DataFrame info:")
-                print(f"- Shape: {df.shape}")
                 print(f"- Columns: {df.columns}")
-                print(f"- date_id range: {df['date_id'].min()} to {df['date_id'].max()}")
+                print(f"- date_id range: {df.select('date_id').min()} to {df.select('date_id').max()}")
                 raise
-            
-            print("\nDataset shapes:")
-            print(f"- Training data: {train_data.shape}")
-            print(f"- Validation data: {val_data.shape}")
-            
             # Train model
             print("\nStarting training...")
             model = trainer.train(

@@ -1,10 +1,11 @@
-import pytorch_lightning as pl
+import pytorch_lightning as lightning
 from pytorch_forecasting import TimeSeriesDataSet, TemporalFusionTransformer
 from pytorch_forecasting.data import NaNLabelEncoder
 from pytorch_forecasting.metrics import SMAPE
 from torch.utils.data import DataLoader
 import torch
 import numpy as np
+import polars as pl
 import psutil
 import os
 from tqdm import tqdm
@@ -34,7 +35,7 @@ class TFTTrainer:
     def train(self, data):
         training_cutoff = data["time_idx"].max() - self.config.max_prediction_length
         training = TimeSeriesDataSet(
-            data[lambda x: x.time_idx <= training_cutoff],
+            data.filter(pl.col("time_idx") <= training_cutoff),
             time_idx="time_idx",
             target="target",
             group_ids=["group_id"],
