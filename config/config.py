@@ -16,11 +16,22 @@ class Config:
     # Model parameters
     RANDOM_STATE = 42
     NUM_SPLITS = 5
-    BATCH_SIZE = 10000
+    BATCH_SIZE = 64  # Adjusted for TFT
     
     # Feature engineering parameters
     ROLLING_WINDOWS = [5, 10, 20]
     LAG_WINDOWS = [1, 2, 3]
+    
+    # TFT-specific parameters
+    MAX_ENCODER_LENGTH = 60
+    MAX_PREDICTION_LENGTH = 30
+    HIDDEN_SIZE = 16
+    ATTENTION_HEAD_SIZE = 4
+    DROPOUT = 0.3
+    HIDDEN_CONTINUOUS_SIZE = 8
+    OUTPUT_SIZE = 7
+    LEARNING_RATE = 0.03
+    MAX_EPOCHS = 30
     
     @staticmethod
     def get_feature_names():

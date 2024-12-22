@@ -6,22 +6,25 @@ import os
 @dataclass
 class ModelConfig:
     # Model parameters
-    model_name: str = "lgb_baseline"
-    model_type: str = "lightgbm"
+    model_name: str = "tft"
+    model_type: str = "temporal_fusion_transformer"
     
     # GPU settings
     use_gpu: bool = False
     gpu_device: int = 0
     
     # Training parameters
-    learning_rate: float = 0.05
-    num_leaves: int = 31
-    feature_fraction: float = 0.9
-    bagging_fraction: float = 0.8
-    bagging_freq: int = 5
-    early_stopping_rounds: int = -1
-    num_boost_round: int = 1000
-    
+    learning_rate: float = 0.03
+    max_encoder_length: int = 60
+    max_prediction_length: int = 30
+    hidden_size: int = 16
+    attention_head_size: int = 4
+    dropout: float = 0.3
+    hidden_continuous_size: int = 8
+    output_size: int = 7
+    max_epochs: int = 30
+    batch_size: int = 64
+
     def __post_init__(self):
         # Paths
         self.base_dir = Path(__file__).parent.parent

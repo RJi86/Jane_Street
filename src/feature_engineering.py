@@ -40,6 +40,9 @@ class FeatureEngineer:
         """Create time-based features using Polars"""
         print("Creating time features...")
         
+        # Create time_idx column
+        df = df.with_row_count("time_idx")
+        
         return df.with_columns([
             pl.col("time_id").diff().over("symbol_id").alias("time_diff"),
             pl.col("date_id").diff().over("symbol_id").alias("date_diff"),
