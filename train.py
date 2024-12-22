@@ -112,12 +112,7 @@ class TrainingManager:
             # Ensure time_idx is an integer type
             df = df.with_columns(pl.col("time_idx").cast(pl.Int64), pl.col("symbol_id").cast(pl.String).cast(pl.Categorical))
             df = df.fill_null(0)
-            # cast all floats to f32
-            for col in df.columns:
-                if df.select(col).dtypes == pl.Float32:
-                    df = df.with_columns(col, df.select(col).cast(pl.Float64))
-
-            df = df.collect(streaming=True)
+            # df = df.collect(streaming=True)
 
             # Train/validation split
             print("\nSplitting data...")
@@ -137,7 +132,8 @@ class TrainingManager:
             # Train model
             print("\nStarting training...")
             model = trainer.train(
-                data=train_data  # Assuming train_data is properly preprocessed
+                data=train_data,  # Assuming train_data is properly preprocessed
+                val=val_data  # Assuming val_data is properly preprocessed
             )
             
             print("\nTraining completed successfully!")

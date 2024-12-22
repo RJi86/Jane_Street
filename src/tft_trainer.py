@@ -1,14 +1,15 @@
-import pytorch_lightning as lightning
+import pytorch_lightning as pl
 from pytorch_forecasting import TimeSeriesDataSet, TemporalFusionTransformer
 from pytorch_forecasting.data import NaNLabelEncoder
 from pytorch_forecasting.metrics import SMAPE
 from torch.utils.data import DataLoader
 import torch
 import numpy as np
-import polars as pl
+# import polars as pl
 import psutil
 import os
 from tqdm import tqdm
+
 
 class TFTTrainer:
     def __init__(self, config):
@@ -32,7 +33,7 @@ class TFTTrainer:
         r2 = 1 - (residual_ss / total_ss)
         return r2
 
-    def train(self, data):
+    def train(self, data, val):
         # training_cutoff = data["time_idx"].max() - self.config.max_prediction_length
         training = TimeSeriesDataSet(
             data.to_pandas(use_pyarrow_extension_array=True),
@@ -41,13 +42,27 @@ class TFTTrainer:
             group_ids=["symbol_id"],
             max_encoder_length=self.config.max_encoder_length,
             max_prediction_length=self.config.max_prediction_length,
-            static_categoricals=["symbol_id"],
-            time_varying_known_reals=["time_idx"] + [f"feature_{str(i).zfill(2)}" for i in range(79)],
+            # static_categoricals=["symbol_id"],
+            time_varying_known_reals=["time_idx"]
+            + [f"feature_{str(i).zfill(2)}" for i in range(79)],
             time_varying_unknown_reals=["responder_6"],
-            # target_normalizer=NaNLabelEncoder(add_nan=True),
+            target_normalizer=NaNLabelEncoder(add_nan=True),
         )
 
-        train_dataloader = DataLoader(training, batch_size=self.config.batch_size, shuffle=True)
+        validation = TimeSeriesDataSet.from_dataset(
+            training,
+            val.to_pandas(use_pyarrow_extension_array=True),
+            predict=True,
+            stop_randomization=True,
+        )
+
+        train_dataloader = DataLoader(
+            training, batch_size=self.config.batch_size, shuffle=True
+        )
+
+        val_dataloader = DataLoader(
+            validation, batch_size=self.config.batch_size*10, shuffle=False
+        )
 
         tft = TemporalFusionTransformer.from_dataset(
             training,
@@ -62,8 +77,25 @@ class TFTTrainer:
             reduce_on_plateau_patience=4,
         )
 
-        trainer = pl.Trainer(gpus=1 if self.config.use_gpu else 0, max_epochs=self.config.max_epochs)
-        trainer.fit(tft, train_dataloader)
+        trainer = pl.Trainer(
+            accelerator="auto",
+            max_epochs=self.config.max_epochs,
+            enable_model_summary=True,
+            gradient_clip_val=0.1,
+        )
+
+        def get_all_subclasses(cls):
+            all_subclasses = []
+
+            for subclass in cls.__subclasses__():
+                all_subclasses.append(subclass)
+                all_subclasses.extend(get_all_subclasses(subclass))
+
+            return all_subclasses
+        print(get_all_subclasses(tft.__class__))
+        trainer.fit(
+            tft, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader
+        )
 
         # Log the training progress
         for epoch in range(self.config.max_epochs):

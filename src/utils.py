@@ -39,7 +39,7 @@ def load_partition(partition_id, base_path):
         raise FileNotFoundError(f"Partition file not found: {partition_path}")
     
     # Use Polars to read parquet file
-    df = pl.scan_parquet(partition_path)
+    df = pl.read_parquet(partition_path)
     logger.info(f"Successfully loaded partition {partition_id}")
     return df
 
