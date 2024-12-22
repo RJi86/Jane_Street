@@ -1,7 +1,7 @@
 import argparse
 import datetime
 import os
-import sys  # Add this line
+import sys
 from pathlib import Path
 import torch
 import logging
@@ -104,6 +104,9 @@ class TrainingManager:
                 print("\nDebug mode: Using subset of data")
                 df = df.head(10000)
             
+            # Ensure time_idx is an integer type
+            df = df.with_columns(pl.col("time_idx").cast(pl.Int64))
+
             # Feature engineering
             print("\nPerforming feature engineering...")
             feature_engineer = FeatureEngineer(self.config)

@@ -90,6 +90,11 @@ class FeatureEngineer:
         
         feature_cols = [f'feature_{i:02d}' for i in range(79)]
         
+        # Exclude debugging features
+        exclude_features = [f"feature_{i:02d}_lag_{j}" for i in range(60, 80) for j in range(1, 4)] + \
+                           [f"feature_59_rmean_20", f"feature_59_rstd_20"]
+        feature_cols = [col for col in feature_cols if col not in exclude_features]
+
         # First, calculate the mean and std in separate operations
         df = df.with_columns([
             pl.fold(
