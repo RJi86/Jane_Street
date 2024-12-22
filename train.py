@@ -1,7 +1,7 @@
 import argparse
 import datetime
 import os
-import sys
+import sys  # Add this line
 from pathlib import Path
 import torch
 import logging
@@ -12,7 +12,7 @@ import json
 import polars as pl
 
 from config.model_config import ModelConfig
-from src.tft_trainer import TFTTrainer  # Update import
+from src.tft_trainer import TFTTrainer
 from src.checkpoint_manager import CheckpointManager
 from src.feature_engineering import FeatureEngineer
 from src.utils import load_training_data, setup_logging
@@ -54,10 +54,14 @@ class TrainingManager:
         print(f"- GPU device: {self.config.gpu_device}")
         print(f"- Data partitions: {self.args.partitions}")
         print(f"- Learning rate: {self.config.learning_rate}")
-        print(f"- Number of leaves: {self.config.num_leaves}")
-        print(f"- Feature fraction: {self.config.feature_fraction}")
-        print(f"- Bagging fraction: {self.config.bagging_fraction}")
-        print(f"- Number of rounds: {self.config.num_boost_round}")
+        print(f"- Max encoder length: {self.config.max_encoder_length}")
+        print(f"- Max prediction length: {self.config.max_prediction_length}")
+        print(f"- Hidden size: {self.config.hidden_size}")
+        print(f"- Attention head size: {self.config.attention_head_size}")
+        print(f"- Dropout: {self.config.dropout}")
+        print(f"- Hidden continuous size: {self.config.hidden_continuous_size}")
+        print(f"- Output size: {self.config.output_size}")
+        print(f"- Max epochs: {self.config.max_epochs}")
         print(f"\nTime (UTC): {self.start_time}")
         print(f"User: {os.getenv('USERNAME', 'unknown')}")
         
